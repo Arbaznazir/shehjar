@@ -1,0 +1,384 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --gold-gradient-from: rgba(182,155,76,1);
+  --gold-gradient-to: rgba(234,219,102,1);
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 255, 255, 255;
+  --background-end-rgb: 255, 255, 255;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+body {
+  background-color: black;
+  color: white;
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+}
+
+.menu-item-gradient {
+  background: linear-gradient(135deg, var(--gold-gradient-from), var(--gold-gradient-to));
+}
+
+.text-gradient {
+  background: linear-gradient(90deg, rgba(182,155,76,1) 0%, rgba(234,219,102,1) 50%, rgba(182,155,76,1) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Animations */
+.fade-in {
+  animation: fadeIn 1s ease-in;
+}
+
+.slide-in-left {
+  animation: slideInLeft 1s ease-out;
+}
+
+.slide-in-right {
+  animation: slideInRight 1s ease-out;
+}
+
+.slide-up {
+  animation: slideUp 0.8s ease-out;
+}
+
+/* Custom Animations */
+.animate-fade-in {
+  animation: fadeIn 1s ease-in-out forwards;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.8s ease-out forwards;
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+.animate-slow-zoom {
+  animation: slowZoom 20s ease-in-out infinite;
+}
+
+.animate-pulse-subtle {
+  animation: pulseSubtle 3s ease-in-out infinite;
+}
+
+.animate-text-shimmer {
+  animation: textShimmer 3s linear infinite;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes slowZoom {
+  0%, 100% { transform: scale(1.05); }
+  50% { transform: scale(1.1); }
+}
+
+@keyframes pulseSubtle {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes textShimmer {
+  0% {
+    background-position: -100% 0;
+    text-shadow: 0 0 5px rgba(234, 219, 102, 0.3);
+  }
+  50% {
+    text-shadow: 0 0 12px rgba(234, 219, 102, 0.8);
+  }
+  100% {
+    background-position: 200% 0;
+    text-shadow: 0 0 5px rgba(234, 219, 102, 0.3);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Image cutout effects */
+.image-cutout {
+  clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%);
+}
+
+.image-cutout-reverse {
+  clip-path: polygon(0 0, 90% 0, 100% 100%, 10% 100%);
+}
+
+.image-cutout-circle {
+  clip-path: circle(45% at center);
+}
+
+/* Gold text effects */
+.gold-text {
+  @apply text-transparent bg-clip-text bg-gradient-to-r from-[var(--gold-gradient-from)] to-[var(--gold-gradient-to)];
+}
+
+/* Transition effects */
+.hover-lift {
+  transition: transform 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-5px);
+}
+
+/* Custom utility classes */
+.menu-item {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.menu-item:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(255, 255, 255, 0.1);
+}
+
+.hero-gradient {
+  background: linear-gradient(135deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 100%);
+}
+
+/* Card designs */
+.dish-card {
+  background: rgba(20, 20, 20, 0.8);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(182, 155, 76, 0.3);
+  transition: all 0.3s ease;
+}
+
+.dish-card:hover {
+  border-color: rgba(234, 219, 102, 0.8);
+  box-shadow: 0 10px 25px rgba(234, 219, 102, 0.2);
+}
+
+@media (max-width: 640px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+@layer components {
+  /* Custom styles for the menu page */
+  .categories-container::-webkit-scrollbar {
+    height: 5px;
+  }
+
+  .categories-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+  }
+
+  .categories-container::-webkit-scrollbar-thumb {
+    background: #d97706;
+    border-radius: 10px;
+  }
+
+  .categories-container::-webkit-scrollbar-thumb:hover {
+    background: #b45309;
+  }
+
+  /* Animation for menu items */
+  .menu-item-enter {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  .menu-item-enter-active {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 300ms, transform 300ms;
+  }
+
+  /* Custom checkbox styling */
+  input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    height: 1rem;
+    width: 1rem;
+    background-color: #fff;
+    border: 1px solid #d97706;
+    border-radius: 0.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  input[type="checkbox"]:checked {
+    background-color: #15803d;
+    border-color: #15803d;
+  }
+
+  input[type="checkbox"]:checked::after {
+    content: "";
+    width: 0.375rem;
+    height: 0.375rem;
+    border-radius: 0.125rem;
+    background-color: white;
+  }
+}
+
+/* Add custom shadow effects for the luxury theme */
+.shadow-gold {
+  box-shadow: 0 4px 20px rgba(234, 219, 102, 0.3);
+}
+
+.glow-gold {
+  text-shadow: 0 0 8px rgba(234, 219, 102, 0.6);
+}
+
+.hover-shadow-gold:hover {
+  box-shadow: 0 0 15px rgba(234, 219, 102, 0.3);
+}
+
+/* Aspect ratio utilities for modern browsers */
+.aspect-container {
+  position: relative;
+  width: 100%;
+}
+
+.aspect-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.aspect-16x9 {
+  padding-top: 56.25%; /* 9/16 * 100% */
+}
+
+/* Remove dark background from headings on all pages */
+body .hero-gradient {
+  background: none !important;
+}
+
+body .section-heading h1,
+body .section-heading h2,
+body .section-heading h3,
+body .page-title,
+body .hero-content h1,
+body .hero-content h2,
+body h1 span.block,
+body h1 span.text-transparent,
+body h2 span.text-transparent {
+  background-clip: text !important;
+  -webkit-background-clip: text !important;
+  color: transparent !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+}
+
+/* Make sure gradient text displays properly */
+body .text-transparent.bg-clip-text.bg-gradient-to-r,
+body span.block.text-transparent.bg-clip-text.bg-gradient-to-r,
+body span.text-transparent.bg-clip-text.bg-gradient-to-r {
+  background-clip: text !important;
+  -webkit-background-clip: text !important;
+  color: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Apply a subtle text shadow only when needed for readability */
+body .light-bg-text {
+  text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+}
+
+/* Homepage-specific styles - these will override the above rules */
+body.is-homepage .hero-gradient {
+  background: linear-gradient(135deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 100%) !important;
+}
+
+body.is-homepage .section-heading h1,
+body.is-homepage .section-heading h2,
+body.is-homepage .section-heading h3,
+body.is-homepage .page-title,
+body.is-homepage .hero-content h1,
+body.is-homepage .hero-content h2 {
+  background: inherit !important;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.7) !important;
+  color: inherit !important;
+}
+
+/* Add class to home page */
+.home-page {
+  /* This class should be added to the body in the homepage layout */
+} 
