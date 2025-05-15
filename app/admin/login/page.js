@@ -4,7 +4,11 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
-import { isAuthenticated, login } from "../services/authService";
+import { isAuthenticated, login } from "../../../services/authService";
+
+// pull in the env vars defined in .env.local
+const ADMIN_USERNAME = process.env.NEXT_PUBLIC_ADMIN_USERNAME;
+const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD;
 
 export default function AdminLogin() {
   const [username, setUsername] = useState("");
@@ -13,11 +17,9 @@ export default function AdminLogin() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  // Check if already logged in
+  // if already logged in, go straight to /admin
   useEffect(() => {
-    if (isAuthenticated()) {
-      router.push("/admin");
-    }
+    if (isAuthenticated()) router.push("/admin");
   }, [router]);
 
   const handleLogin = (e) => {
@@ -25,9 +27,7 @@ export default function AdminLogin() {
     setLoading(true);
     setError("");
 
-    // Simple hardcoded authentication for demo purposes
-    // In a real application, use proper authentication with API calls
-    if (username === "admin" && password === "admin123") {
+    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
       login(username);
       router.push("/admin");
     } else {
@@ -93,10 +93,6 @@ export default function AdminLogin() {
             >
               {loading ? "Signing in..." : "Sign In"}
             </button>
-
-            <div className="mt-4 text-center text-gray-500 text-sm">
-              For demo: username = "admin" and password = "admin123"
-            </div>
           </form>
         </div>
       </div>
