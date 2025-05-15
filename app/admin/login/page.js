@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
-import { isAuthenticated, login } from "../../services/authService";
+import { isAuthenticated, login } from "../services/authService";
 
 // pull in the env vars defined in .env.local
 const ADMIN_USERNAME = process.env.NEXT_PUBLIC_ADMIN_USERNAME;
