@@ -1,34 +1,26 @@
-import "./globals.css";
-import { Inter } from "next/font/google";
-import { CartProvider } from "./components/CartProvider";
+"use client";
 
-const inter = Inter({ subsets: ["latin"] });
-
-export const metadata = {
-  title: "SHEHJAR - Traditional Restaurant & Bakery",
-  description: "Delicious cuisine from SHEHJAR - Fastfood, Restaurant, Bakery",
-  icons: {
-    icon: [
-      { url: "/images/Shehjar Logo.png" },
-      { url: "/images/Shehjar Logo.png", sizes: "16x16", type: "image/png" },
-      { url: "/images/Shehjar Logo.png", sizes: "32x32", type: "image/png" },
-    ],
-    apple: {
-      url: "/images/Shehjar Logo.png",
-      sizes: "180x180",
-      type: "image/png",
-    },
-  },
-};
+import "./globals.css"; // or your global CSS import
+import { useState } from "react";
+import { createBrowserSupabaseClient } from "@supabase/auth-helpers-nextjs";
+import { SessionContextProvider } from "@supabase/auth-helpers-react";
 
 export default function RootLayout({ children }) {
+  // Initialize supabase client in state so it's only ever created once
+  const [supabaseClient] = useState(() =>
+    createBrowserSupabaseClient({
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    })
+  );
+
   return (
     <html lang="en">
-      <head>
-        <link rel="icon" href="/images/Shehjar Logo.png" />
-      </head>
-      <body className={inter.className}>
-        <CartProvider>{children}</CartProvider>
+      <body>
+        {/* Wrap everything so useSupabaseClient() works in child pages */}
+        <SessionContextProvider supabaseClient={supabaseClient}>
+          {children}
+        </SessionContextProvider>
       </body>
     </html>
   );

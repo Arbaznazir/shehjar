@@ -4,8 +4,11 @@ const nextConfig = {
   images: {
     domains: [],
   },
-  // Optional: Set default pathname
   trailingSlash: false,
+  // ——— remove experimental altogether ———
+  // experimental: {
+  //   appDir: true,
+  // },
 };
 
 module.exports = nextConfig;

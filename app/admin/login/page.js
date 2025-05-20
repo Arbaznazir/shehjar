@@ -2,102 +2,81 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Header from "../../components/Header";
-import Footer from "../../components/Footer";
-import { isAuthenticated, login } from "../services/authService";
-
-// pull in the env vars defined in .env.local
-const ADMIN_USERNAME = process.env.NEXT_PUBLIC_ADMIN_USERNAME;
-const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD;
+import { useSupabaseClient, useSession } from "@supabase/auth-helpers-react";
 
 export default function AdminLogin() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const supabase = useSupabaseClient();
+  const session = useSession();
   const router = useRouter();
 
-  // if already logged in, go straight to /admin
-  useEffect(() => {
-    if (isAuthenticated()) router.push("/admin");
-  }, [router]);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
-  const handleLogin = (e) => {
+  // If they’re already signed in, send to /admin
+  useEffect(() => {
+    if (session) {
+      router.replace("/admin/orders");
+    }
+  }, [session, router]);
+
+  const handleLogin = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError("");
 
-    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-      login(username);
-      router.push("/admin");
+    const { error: err } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (err) {
+      setError(err.message);
     } else {
-      setError("Invalid username or password");
-      setLoading(false);
+      // on success, session is set and effect above will redirect
     }
   };
 
   return (
-    <main className="min-h-screen bg-black">
-      <Header />
+    <div className="min-h-screen bg-black flex items-center justify-center">
+      <form
+        onSubmit={handleLogin}
+        className="bg-gray-900 p-8 rounded-lg w-full max-w-md"
+      >
+        <h1 className="text-3xl text-center mb-4 text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 to-yellow-300">
+          Admin Login
+        </h1>
 
-      <div className="container mx-auto px-4 py-20">
-        <div className="max-w-md mx-auto">
-          <div className="mb-8 text-center">
-            <h1 className="text-3xl md:text-4xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[rgba(182,155,76,1)] to-[rgba(234,219,102,1)]">
-              Admin Login
-            </h1>
-            <p className="text-gray-400">
-              Sign in to access the restaurant management dashboard.
-            </p>
+        {error && (
+          <div className="mb-4 p-3 bg-red-800 text-red-200 rounded">
+            {error}
           </div>
+        )}
 
-          <form onSubmit={handleLogin} className="dish-card p-8 rounded-lg">
-            {error && (
-              <div className="mb-4 p-4 bg-red-900/50 text-red-200 rounded-lg">
-                {error}
-              </div>
-            )}
+        <label className="block mb-2 text-gray-400">Email</label>
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          className="w-full mb-4 px-3 py-2 bg-gray-800 text-white rounded"
+        />
 
-            <div className="mb-6">
-              <label htmlFor="username" className="block text-gray-400 mb-2">
-                Username
-              </label>
-              <input
-                type="text"
-                id="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full bg-gray-900 border border-gray-800 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-[rgba(234,219,102,1)]"
-                required
-              />
-            </div>
+        <label className="block mb-2 text-gray-400">Password</label>
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          className="w-full mb-6 px-3 py-2 bg-gray-800 text-white rounded"
+        />
 
-            <div className="mb-6">
-              <label htmlFor="password" className="block text-gray-400 mb-2">
-                Password
-              </label>
-              <input
-                type="password"
-                id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-gray-900 border border-gray-800 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-[rgba(234,219,102,1)]"
-                required
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full px-4 py-3 bg-gradient-to-r from-[rgba(182,155,76,1)] to-[rgba(234,219,102,1)] text-black rounded-lg font-bold hover:opacity-90 transition-opacity disabled:opacity-50"
-            >
-              {loading ? "Signing in..." : "Sign In"}
-            </button>
-          </form>
-        </div>
-      </div>
-
-      <Footer />
-    </main>
+        <button
+          type="submit"
+          className="w-full py-3 bg-gradient-to-r from-yellow-500 to-yellow-300 rounded font-bold"
+        >
+          Sign In
+        </button>
+      </form>
+    </div>
   );
 }

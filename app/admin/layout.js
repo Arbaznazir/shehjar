@@ -1,4 +1,6 @@
 "use client";
+import { createBrowserSupabaseClient } from "@supabase/auth-helpers-nextjs";
+import { SessionContextProvider } from "@supabase/auth-helpers-react";
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
