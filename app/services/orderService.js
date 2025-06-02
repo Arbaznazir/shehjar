@@ -1,103 +1,184 @@
-// Order management service that persists data to localStorage
-// In a real app, this would interact with a real database/API
-
+import { supabase } from "../../lib/supabaseClient";
 import { menuData } from "../data/menuData";
 
-// Generate mock orders if we have no existing orders
-const generateMockOrders = () => {
-  const now = new Date();
-  const orders = [];
+// Create a new order in Supabase
+export const createOrder = async (orderData) => {
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .insert([
+        {
+          customer_name: orderData.customerName,
+          customer_phone: orderData.customerPhone,
+          order_type: orderData.orderType,
+          table_number: orderData.tableNumber,
+          delivery_address: orderData.deliveryAddress,
+          payment_method: orderData.paymentMethod,
+          status: 'pending',
+          items: orderData.items
+        }
+      ])
+      .select();
 
-  // Create order data for last 60 days
-  for (let i = 0; i < 60; i++) {
-    const date = new Date(now);
-    date.setDate(date.getDate() - i);
-
-    // Generate 3-10 orders per day
-    const dailyOrderCount = Math.floor(Math.random() * 8) + 3;
-
-    for (let j = 0; j < dailyOrderCount; j++) {
-      // Generate order with 1-4 items
-      const orderItems = [];
-      const itemCount = Math.floor(Math.random() * 4) + 1;
-
-      let orderTotal = 0;
-
-      for (let k = 0; k < itemCount; k++) {
-        // Select random menu item
-        const menuItem = menuData[Math.floor(Math.random() * menuData.length)];
-
-        // Calculate price with GST
-        const priceWithGST = menuItem.price * 1.18;
-
-        const quantity = Math.floor(Math.random() * 2) + 1;
-
-        orderItems.push({
-          id: menuItem.id,
-          name: menuItem.name,
-          category: menuItem.category,
-          price: priceWithGST,
-          quantity,
-        });
-
-        orderTotal += priceWithGST * quantity;
-      }
-
-      orders.push({
-        id: `ORD-${date.getFullYear()}${(date.getMonth() + 1)
-          .toString()
-          .padStart(2, "0")}${date.getDate().toString().padStart(2, "0")}-${j}`,
-        date: date.toISOString(),
-        total: orderTotal,
-        items: orderItems,
-        status: Math.random() > 0.1 ? "completed" : "cancelled",
-        paymentMethod: Math.random() > 0.7 ? "Cash" : "Online",
-      });
-    }
+    if (error) throw error;
+    return data[0];
+  } catch (error) {
+    console.error('Error creating order:', error);
+    throw error;
   }
-
-  return orders;
 };
 
-// Get all orders
-export const getOrders = () => {
-  if (typeof window === "undefined") return [];
-
+// Get all orders from Supabase
+export const getOrders = async () => {
   try {
-    const savedOrders = localStorage.getItem("restaurantOrders");
-    if (savedOrders) {
-      return JSON.parse(savedOrders);
-    } else {
-      const mockOrders = generateMockOrders();
-      localStorage.setItem("restaurantOrders", JSON.stringify(mockOrders));
-      return mockOrders;
-    }
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .order('timestamp', { ascending: false });
+
+    if (error) throw error;
+    return data;
   } catch (error) {
-    console.error("Error getting orders:", error);
+    console.error('Error fetching orders:', error);
     return [];
   }
 };
 
-// Get orders for a specific month
-export const getOrdersByMonth = (month, year = new Date().getFullYear()) => {
-  const allOrders = getOrders();
+// Update order status
+export const updateOrderStatus = async (orderId, status) => {
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .update({ status })
+      .eq('order_id', orderId)
+      .select();
 
-  // Convert month name to number (0-11)
-  const months = [
-    "january",
-    "february",
-    "march",
-    "april",
-    "may",
-    "june",
-    "july",
-    "august",
-    "september",
-    "october",
-    "november",
-    "december",
-  ];
-  const monthIndex = months.findIndex(
+    if (error) throw error;
+    return data[0];
+  } catch (error) {
+    console.error('Error updating order status:', error);
+    throw error;
+  }
+};
+
+// Get orders by date range
+export const getOrdersByDateRange = async (startDate, endDate) => {
+    try {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .gte('timestamp', startDate)
+      .lte('timestamp', endDate)
+      .order('timestamp', { ascending: false });
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error fetching orders by date range:', error);
+    return [];
+  }
+};
+
+// Get order by ID
+export const getOrderById = async (orderId) => {
+      try {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('order_id', orderId)
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error fetching order:', error);
+    throw error;
+  }
+};
+
+// Get orders for a specific month
+export const getOrdersByMonth = async (month, year = new Date().getFullYear()) => {
+  try {
+    // Convert month name to number (0-11)
+    const months = [
+      "january",
+      "february",
+      "march",
+      "april",
+      "may",
+      "june",
+      "july",
+      "august",
+      "september",
+      "october",
+      "november",
+      "december",
+    ];
+    const monthIndex = months.findIndex((m) => m.toLowerCase() === month.toLowerCase());
+    
+    if (monthIndex === -1) throw new Error('Invalid month name');
+
+    // Create date range for the specified month
+    const startDate = new Date(year, monthIndex, 1).toISOString();
+    const endDate = new Date(year, monthIndex + 1, 0).toISOString();
+
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .gte('timestamp', startDate)
+      .lte('timestamp', endDate)
+      .order('timestamp', { ascending: false });
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error fetching orders by month:', error);
+    return [];
+  }
+};
+
+// Delete an order
+export const deleteOrder = async (orderId) => {
+  try {
+    const { error } = await supabase
+      .from('orders')
+      .delete()
+      .eq('order_id', orderId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error deleting order:', error);
+    throw error;
+  }
+};
+
+// Update order details
+export const updateOrder = async (orderId, orderData) => {
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .update({
+        customer_name: orderData.customerName,
+        customer_phone: orderData.customerPhone,
+        order_type: orderData.orderType,
+        table_number: orderData.tableNumber,
+        delivery_address: orderData.deliveryAddress,
+        payment_method: orderData.paymentMethod,
+        status: orderData.status,
+        items: orderData.items
+      })
+      .eq('order_id', orderId)
+      .select();
+
+    if (error) throw error;
+    return data[0];
+  } catch (error) {
+    console.error('Error updating order:', error);
+    throw error;
+  }
+};
+
     (m) => m.toLowerCase() === month.toLowerCase()
   );
 

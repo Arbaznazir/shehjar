@@ -9,7 +9,7 @@ const OrderBill = ({ order, onPrint }) => {
 
   const handlePrint = useReactToPrint({
     content: () => billRef.current,
-    documentTitle: `Shehjar-Bill-${order.orderId}`,
+    documentTitle: `Shehjar-Bill-${order.order_id}`,
     onAfterPrint: () => {
       if (onPrint) onPrint();
     },
@@ -57,15 +57,15 @@ const OrderBill = ({ order, onPrint }) => {
   const getPaymentStatusText = () => {
     if (order.isPaid) return "PAID";
 
-    switch (order.paymentMethod) {
+    switch (order.payment_method) {
+      case "cash":
+        return "CASH PAYMENT";
+      case "card":
+        return "CARD PAYMENT";
+      case "upi":
+        return "UPI PAYMENT";
       case "cod":
         return "CASH ON DELIVERY";
-      case "card":
-        return "CARD PAYMENT PENDING";
-      case "upi":
-        return "UPI PAYMENT PENDING";
-      case "post-service":
-        return "PAYMENT AFTER SERVICE";
       default:
         return "PAYMENT PENDING";
     }
@@ -73,13 +73,13 @@ const OrderBill = ({ order, onPrint }) => {
 
   // Get order type text
   const getOrderTypeText = () => {
-    switch (order.orderType) {
+    switch (order.order_type) {
       case "dine-in":
-        return `Table: ${order.tableNumber || "N/A"}`;
+        return `Table: ${order.table_number || "N/A"}`;
       case "takeaway":
         return "TAKEAWAY";
       case "delivery":
-        return `DELIVERY: ${order.deliveryAddress || ""}`;
+        return `DELIVERY: ${order.delivery_address || ""}`;
       default:
         return "ORDER";
     }
@@ -139,7 +139,7 @@ const OrderBill = ({ order, onPrint }) => {
           <div className="mb-4">
             <div className="flex justify-between">
               <span>Order #:</span>
-              <span>{order.orderId}</span>
+              <span>{order.order_id}</span>
             </div>
             <div className="flex justify-between">
               <span>Date:</span>
@@ -153,16 +153,16 @@ const OrderBill = ({ order, onPrint }) => {
               <span>Type:</span>
               <span>{getOrderTypeText()}</span>
             </div>
-            {order.customerName && (
+            {order.customer_name && (
               <div className="flex justify-between">
                 <span>Customer:</span>
-                <span>{order.customerName}</span>
+                <span>{order.customer_name}</span>
               </div>
             )}
-            {order.customerPhone && (
+            {order.customer_phone && (
               <div className="flex justify-between">
                 <span>Phone:</span>
-                <span>{order.customerPhone}</span>
+                <span>{order.customer_phone}</span>
               </div>
             )}
           </div>
