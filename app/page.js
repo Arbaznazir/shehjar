@@ -7,12 +7,23 @@ import Header from "./components/Header";
 import Footer from "./components/Footer";
 import { menuData } from "./data/menuData";
 import { useCart } from "./context/CartContext";
+import { sendReservationToWhatsApp } from "./services/whatsappService";
 
 export default function Home() {
   const [featuredItems, setFeaturedItems] = useState([]);
   const [specialCategories, setSpecialCategories] = useState([]);
-  const { addToCart } = useCart();
+  const { addToCart, toggleFavorite, isFavorite } = useCart();
   const [addedItems, setAddedItems] = useState({});
+
+  // Reservation form state
+  const [reservationForm, setReservationForm] = useState({
+    name: "",
+    phone: "",
+    guests: "",
+    date: "",
+    preferredTime: "",
+  });
+  const [isSubmittingReservation, setIsSubmittingReservation] = useState(false);
 
   useEffect(() => {
     // Add is-homepage class to body for homepage-specific styling
@@ -162,6 +173,82 @@ export default function Home() {
     }, 1500);
   };
 
+  // Handle reservation form input changes
+  const handleReservationChange = (e) => {
+    const { name, value } = e.target;
+    setReservationForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  // Handle reservation form submission
+  const handleReservationSubmit = async (e) => {
+    e.preventDefault();
+
+    // Validate form
+    if (
+      !reservationForm.name ||
+      !reservationForm.phone ||
+      !reservationForm.guests ||
+      !reservationForm.date ||
+      !reservationForm.preferredTime
+    ) {
+      alert("Please fill in all fields");
+      return;
+    }
+
+    // Validate date is not in the past
+    const selectedDate = new Date(reservationForm.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (selectedDate < today) {
+      alert("Please select a future date");
+      return;
+    }
+
+    setIsSubmittingReservation(true);
+
+    try {
+      // Create reservation object with ID
+      const reservation = {
+        ...reservationForm,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+      };
+
+      // Send to WhatsApp
+      const success = sendReservationToWhatsApp(reservation);
+
+      if (success) {
+        // Reset form
+        setReservationForm({
+          name: "",
+          phone: "",
+          guests: "",
+          date: "",
+          preferredTime: "",
+        });
+
+        alert(
+          "Reservation request sent! We'll contact you shortly to confirm."
+        );
+      } else {
+        alert(
+          "Failed to send reservation request. Please try again or call us directly."
+        );
+      }
+    } catch (error) {
+      console.error("Error submitting reservation:", error);
+      alert(
+        "Failed to send reservation request. Please try again or call us directly."
+      );
+    } finally {
+      setIsSubmittingReservation(false);
+    }
+  };
+
   return (
     <main className="min-h-screen bg-black">
       <Header />
@@ -246,6 +333,30 @@ export default function Home() {
                 <div className="absolute -top-2 -left-2 bg-gradient-to-r from-[rgba(182,155,76,1)] to-[rgba(234,219,102,1)] text-black px-3 py-1 rounded text-sm font-bold">
                   {item.categoryName}
                 </div>
+
+                {/* Favorite Heart Icon */}
+                <button
+                  onClick={() => toggleFavorite(item)}
+                  className="absolute top-2 right-2 p-2 rounded-full bg-black/50 hover:bg-black/70 transition-all duration-200 group-hover:bg-black/80"
+                >
+                  <svg
+                    className={`w-5 h-5 transition-all duration-200 ${
+                      isFavorite(item.id)
+                        ? "text-red-500 fill-current"
+                        : "text-white hover:text-red-300"
+                    }`}
+                    fill={isFavorite(item.id) ? "currentColor" : "none"}
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                    />
+                  </svg>
+                </button>
                 <h3 className="text-xl font-bold mb-2 mt-4 text-white group-hover:text-[rgba(234,219,102,1)] transition-colors">
                   {item.name}
                 </h3>
@@ -417,25 +528,39 @@ export default function Home() {
             Experience our exquisite cuisine in an elegant atmosphere. Let us
             create memorable moments for you and your loved ones.
           </p>
-          <div className="bg-black/80 p-8 max-w-md mx-auto rounded-lg border border-[rgba(182,155,76,0.6)] shadow-xl shadow-[rgba(182,155,76,0.15)]">
+          <form
+            onSubmit={handleReservationSubmit}
+            className="bg-black/80 p-8 max-w-md mx-auto rounded-lg border border-[rgba(182,155,76,0.6)] shadow-xl shadow-[rgba(182,155,76,0.15)]"
+          >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <input
                   type="text"
+                  name="name"
+                  value={reservationForm.name}
+                  onChange={handleReservationChange}
                   placeholder="Your Name"
+                  required
                   className="w-full bg-gray-900/90 border border-[rgba(182,155,76,0.4)] rounded-lg p-3 text-white focus:border-[rgba(234,219,102,1)] focus:outline-none focus:ring-1 focus:ring-[rgba(234,219,102,0.5)] transition-all duration-300 placeholder-gray-400"
                 />
               </div>
               <div>
                 <input
                   type="tel"
+                  name="phone"
+                  value={reservationForm.phone}
+                  onChange={handleReservationChange}
                   placeholder="Phone Number"
+                  required
                   className="w-full bg-gray-900/90 border border-[rgba(182,155,76,0.4)] rounded-lg p-3 text-white focus:border-[rgba(234,219,102,1)] focus:outline-none focus:ring-1 focus:ring-[rgba(234,219,102,0.5)] transition-all duration-300 placeholder-gray-400"
                 />
               </div>
               <div>
                 <select
-                  defaultValue=""
+                  name="guests"
+                  value={reservationForm.guests}
+                  onChange={handleReservationChange}
+                  required
                   className="w-full bg-gray-900/90 border border-[rgba(182,155,76,0.4)] rounded-lg p-3 text-white focus:border-[rgba(234,219,102,1)] focus:outline-none focus:ring-1 focus:ring-[rgba(234,219,102,0.5)] transition-all duration-300 appearance-none custom-select"
                 >
                   <option value="" disabled>
@@ -451,13 +576,21 @@ export default function Home() {
               <div>
                 <input
                   type="date"
+                  name="date"
+                  value={reservationForm.date}
+                  onChange={handleReservationChange}
+                  required
+                  min={new Date().toISOString().split("T")[0]}
                   className="w-full bg-gray-900/90 border border-[rgba(182,155,76,0.4)] rounded-lg p-3 text-white focus:border-[rgba(234,219,102,1)] focus:outline-none focus:ring-1 focus:ring-[rgba(234,219,102,0.5)] transition-all duration-300 date-input"
                   style={{ colorScheme: "dark" }}
                 />
               </div>
               <div className="col-span-1 md:col-span-2">
                 <select
-                  defaultValue=""
+                  name="preferredTime"
+                  value={reservationForm.preferredTime}
+                  onChange={handleReservationChange}
+                  required
                   className="w-full bg-gray-900/90 border border-[rgba(182,155,76,0.4)] rounded-lg p-3 text-white focus:border-[rgba(234,219,102,1)] focus:outline-none focus:ring-1 focus:ring-[rgba(234,219,102,0.5)] transition-all duration-300 appearance-none custom-select"
                 >
                   <option value="" disabled>
@@ -468,8 +601,16 @@ export default function Home() {
                 </select>
               </div>
             </div>
-            <button className="w-full px-8 py-4 bg-gradient-to-r from-[rgba(182,155,76,1)] to-[rgba(234,219,102,1)] text-black rounded-lg text-lg font-bold hover:opacity-95 transition-all duration-300 shadow-gold hover:shadow-gold-lg transform hover:scale-[1.02] animate-pulse-subtle">
-              Book Your Table
+            <button
+              type="submit"
+              disabled={isSubmittingReservation}
+              className={`w-full px-8 py-4 bg-gradient-to-r from-[rgba(182,155,76,1)] to-[rgba(234,219,102,1)] text-black rounded-lg text-lg font-bold hover:opacity-95 transition-all duration-300 shadow-gold hover:shadow-gold-lg transform hover:scale-[1.02] ${
+                isSubmittingReservation
+                  ? "opacity-50 cursor-not-allowed"
+                  : "animate-pulse-subtle"
+              }`}
+            >
+              {isSubmittingReservation ? "Sending..." : "Book Your Table"}
             </button>
             <p className="text-gray-300 text-sm mt-4">
               For special requests or large groups, please call us directly at{" "}
@@ -480,7 +621,7 @@ export default function Home() {
                 01933-250090
               </a>
             </p>
-          </div>
+          </form>
         </div>
       </section>
 

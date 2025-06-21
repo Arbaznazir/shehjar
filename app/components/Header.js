@@ -3,15 +3,22 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { isAuthenticated } from "../admin/services/authService";
+
 import { restaurantInfo } from "../data/restaurantInfo";
 import { useCart } from "../context/CartContext";
+import OrderHistory from "./OrderHistory";
+import FavoritesModal from "./FavoritesModal";
+import { getOrderHistory } from "../services/orderHistoryService";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const { cartItems, getCartItemsCount, isCartOpen, setIsCartOpen } = useCart();
+
+  const [isOrderHistoryOpen, setIsOrderHistoryOpen] = useState(false);
+  const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
+  const [orderHistoryCount, setOrderHistoryCount] = useState(0);
+  const { cartItems, getCartItemsCount, isCartOpen, setIsCartOpen, favorites } =
+    useCart();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -22,25 +29,30 @@ export default function Header() {
       }
     };
 
-    // Check if user is logged in as admin
-    const checkAdmin = () => {
-      setIsAdmin(isAuthenticated());
+    // Load order history count
+    const loadOrderHistoryCount = () => {
+      const history = getOrderHistory();
+      setOrderHistoryCount(history.length);
     };
 
     window.addEventListener("scroll", handleScroll);
-    checkAdmin();
-
-    // Set up interval to check admin status periodically
-    const interval = setInterval(checkAdmin, 5000);
+    loadOrderHistoryCount();
 
     return () => {
       window.removeEventListener("scroll", handleScroll);
-      clearInterval(interval);
     };
   }, []);
 
   const handleCartClick = () => {
     setIsCartOpen(true);
+  };
+
+  const handleOrderHistoryClick = () => {
+    setIsOrderHistoryOpen(true);
+  };
+
+  const handleFavoritesClick = () => {
+    setIsFavoritesOpen(true);
   };
 
   return (
@@ -71,6 +83,57 @@ export default function Header() {
 
           {/* Mobile menu button */}
           <div className="md:hidden flex items-center">
+            {orderHistoryCount > 0 && (
+              <button
+                onClick={handleOrderHistoryClick}
+                className="text-white hover:text-[rgba(234,219,102,1)] focus:outline-none mr-4 relative"
+              >
+                <svg
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                  />
+                </svg>
+                <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                  {orderHistoryCount}
+                </span>
+              </button>
+            )}
+            <button
+              onClick={handleFavoritesClick}
+              className="text-white hover:text-[rgba(234,219,102,1)] focus:outline-none mr-4 relative"
+              title="Favorites"
+            >
+              <svg
+                className={`h-6 w-6 transition-colors ${
+                  favorites.length > 0
+                    ? "text-red-500 fill-current"
+                    : "text-white"
+                }`}
+                fill={favorites.length > 0 ? "currentColor" : "none"}
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                />
+              </svg>
+              {favorites.length > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                  {favorites.length}
+                </span>
+              )}
+            </button>
             <button
               onClick={handleCartClick}
               className="text-white hover:text-[rgba(234,219,102,1)] focus:outline-none mr-6 relative"
@@ -155,27 +218,65 @@ export default function Header() {
             >
               Contact
             </Link>
-            {isAdmin ? (
-              <Link
-                href="/admin"
-                className="text-white hover:text-[rgba(234,219,102,1)] font-medium"
-              >
-                Admin Dashboard
-              </Link>
-            ) : (
-              <Link
-                href="/admin/login"
-                className="text-white hover:text-[rgba(234,219,102,1)] font-medium"
-              >
-                Login
-              </Link>
-            )}
+
             <Link
               href="#reservation"
               className="px-4 py-2 bg-gradient-to-r from-[rgba(182,155,76,1)] to-[rgba(234,219,102,1)] text-black rounded-full text-sm font-bold hover:opacity-90 transition-opacity"
             >
               Reservation
             </Link>
+            {orderHistoryCount > 0 && (
+              <button
+                onClick={handleOrderHistoryClick}
+                className="text-white hover:text-[rgba(234,219,102,1)] focus:outline-none relative"
+                title="Order History"
+              >
+                <svg
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                  />
+                </svg>
+                <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                  {orderHistoryCount}
+                </span>
+              </button>
+            )}
+            <button
+              onClick={handleFavoritesClick}
+              className="text-white hover:text-[rgba(234,219,102,1)] focus:outline-none relative"
+              title="Favorites"
+            >
+              <svg
+                className={`h-6 w-6 transition-colors ${
+                  favorites.length > 0
+                    ? "text-red-500 fill-current"
+                    : "text-white"
+                }`}
+                fill={favorites.length > 0 ? "currentColor" : "none"}
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                />
+              </svg>
+              {favorites.length > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                  {favorites.length}
+                </span>
+              )}
+            </button>
             <button
               onClick={handleCartClick}
               className="text-white hover:text-[rgba(234,219,102,1)] focus:outline-none relative"
@@ -241,23 +342,7 @@ export default function Header() {
               >
                 Contact
               </Link>
-              {isAdmin ? (
-                <Link
-                  href="/admin"
-                  className="text-white hover:text-[rgba(234,219,102,1)] font-medium"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Admin Dashboard
-                </Link>
-              ) : (
-                <Link
-                  href="/admin/login"
-                  className="text-white hover:text-[rgba(234,219,102,1)] font-medium"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Login
-                </Link>
-              )}
+
               <Link
                 href="#reservation"
                 className="px-4 py-2 bg-gradient-to-r from-[rgba(182,155,76,1)] to-[rgba(234,219,102,1)] text-black rounded-full text-sm font-bold hover:opacity-90 transition-opacity inline-block w-fit"
@@ -269,6 +354,18 @@ export default function Header() {
           </div>
         )}
       </div>
+
+      {/* Order History Modal */}
+      <OrderHistory
+        isOpen={isOrderHistoryOpen}
+        onClose={() => setIsOrderHistoryOpen(false)}
+      />
+
+      {/* Favorites Modal */}
+      <FavoritesModal
+        isOpen={isFavoritesOpen}
+        onClose={() => setIsFavoritesOpen(false)}
+      />
     </header>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import { useReactToPrint } from "react-to-print";
-import { getFormattedPrice } from "../admin/services/menuService";
+import { getFormattedPrice } from "../services/menuService";
 
 const ClassicBill = ({ order, onPrint }) => {
   const billRef = useRef();

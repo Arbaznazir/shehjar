@@ -9,8 +9,8 @@ import {
   getAllMenuItems,
   gstRates,
   calculateFinalPrice,
-} from "../admin/services/menuService";
-import { getConfig } from "../admin/services/configService";
+} from "../services/menuService";
+import { getConfig } from "../services/configService";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import Image from "next/image";
@@ -55,6 +55,7 @@ const MenuPage = () => {
   const [discountType, setDiscountType] = useState("none");
   const [discountValue, setDiscountValue] = useState(0);
 
+  const { favorites } = useCart();
   const categories = getMenuCategories();
 
   // Load config on component mount
@@ -371,21 +372,28 @@ const MenuPage = () => {
               >
                 {scrolled ? "Categories" : "Browse Our Menu"}
               </h2>
-              <div className="flex items-center bg-gray-900 px-3 py-2 rounded-full border border-gray-800">
-                <input
-                  type="checkbox"
-                  id="vegOnly"
-                  checked={showVegOnly}
-                  onChange={() => setShowVegOnly(!showVegOnly)}
-                  className="mr-2 h-4 w-4"
-                />
-                <label
-                  htmlFor="vegOnly"
-                  className="text-sm font-medium flex items-center cursor-pointer text-gray-300"
-                >
-                  <span className="inline-block w-4 h-4 bg-green-600 rounded-full mr-1"></span>
-                  <span>Veg Only</span>
-                </label>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center bg-gray-900 px-3 py-2 rounded-full border border-gray-800">
+                  <input
+                    type="checkbox"
+                    id="vegOnly"
+                    checked={showVegOnly}
+                    onChange={() => setShowVegOnly(!showVegOnly)}
+                    className="mr-2 h-4 w-4"
+                  />
+                  <label
+                    htmlFor="vegOnly"
+                    className="text-sm font-medium flex items-center cursor-pointer text-gray-300"
+                  >
+                    <span className="inline-block w-4 h-4 bg-green-600 rounded-full mr-1"></span>
+                    <span>Veg Only</span>
+                  </label>
+                </div>
+
+                <div className="text-sm text-gray-400 bg-gray-900 px-3 py-2 rounded-full border border-gray-800">
+                  <span className="text-red-500 mr-1">❤️</span>
+                  <span>Favorites: {favorites.length}</span>
+                </div>
               </div>
             </div>
             <div className="categories-container overflow-x-auto pb-2 -mx-4 px-4">

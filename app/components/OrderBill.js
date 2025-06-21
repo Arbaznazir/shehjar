@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import { useReactToPrint } from "react-to-print";
-import { getFormattedPrice } from "../admin/services/menuService";
+import { getFormattedPrice } from "../services/menuService";
 
 const OrderBill = ({ order, onPrint }) => {
   const billRef = useRef();
@@ -85,6 +85,54 @@ const OrderBill = ({ order, onPrint }) => {
     }
   };
 
+  // Calculate estimated preparation time
+  const calculateEstimatedPrepTime = () => {
+    if (!order.items || order.items.length === 0) return 15;
+
+    const prepTimes = order.items.map((item) => {
+      if (!item.prepTime) return 15; // Default 15 minutes if not specified
+
+      // Parse prep time (e.g., "15-20 mins" -> take average)
+      const timeMatch = item.prepTime.match(/(\d+)(?:-(\d+))?/);
+      if (timeMatch) {
+        const min = parseInt(timeMatch[1]);
+        const max = timeMatch[2] ? parseInt(timeMatch[2]) : min;
+        return (min + max) / 2;
+      }
+      return 15;
+    });
+
+    // Maximum prep time + 5 minutes buffer for multiple items
+    const maxPrepTime = Math.max(...prepTimes);
+    const buffer = order.items.length > 1 ? 5 : 0;
+    return Math.round(maxPrepTime + buffer);
+  };
+
+  // Calculate total nutritional information
+  const calculateNutritionalSummary = () => {
+    return order.items.reduce(
+      (summary, item) => {
+        if (item.nutrition) {
+          summary.calories += (item.nutrition.calories || 0) * item.quantity;
+          summary.protein += (item.nutrition.protein || 0) * item.quantity;
+          summary.carbs += (item.nutrition.carbs || 0) * item.quantity;
+          summary.fat += (item.nutrition.fat || 0) * item.quantity;
+          summary.fiber += (item.nutrition.fiber || 0) * item.quantity;
+          summary.sodium += (item.nutrition.sodium || 0) * item.quantity;
+        }
+        return summary;
+      },
+      {
+        calories: 0,
+        protein: 0,
+        carbs: 0,
+        fat: 0,
+        fiber: 0,
+        sodium: 0,
+      }
+    );
+  };
+
   return (
     <div>
       {/* Print button */}
@@ -153,6 +201,10 @@ const OrderBill = ({ order, onPrint }) => {
               <span>Type:</span>
               <span>{getOrderTypeText()}</span>
             </div>
+            <div className="flex justify-between">
+              <span>Est. Ready:</span>
+              <span>{calculateEstimatedPrepTime()} mins</span>
+            </div>
             {order.customer_name && (
               <div className="flex justify-between">
                 <span>Customer:</span>
@@ -214,6 +266,58 @@ const OrderBill = ({ order, onPrint }) => {
               </tbody>
             </table>
           </div>
+
+          {/* Nutritional Summary */}
+          {(() => {
+            const nutritionSummary = calculateNutritionalSummary();
+            const hasNutrition = nutritionSummary.calories > 0;
+
+            return hasNutrition ? (
+              <div className="mb-4">
+                <div className="border-b border-gray-800 mb-2 pb-1 font-bold">
+                  NUTRITIONAL SUMMARY
+                </div>
+                <div className="grid grid-cols-3 gap-1 text-xs">
+                  <div className="text-center">
+                    <div className="font-bold">
+                      {Math.round(nutritionSummary.calories)}
+                    </div>
+                    <div>Calories</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="font-bold">
+                      {Math.round(nutritionSummary.protein)}g
+                    </div>
+                    <div>Protein</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="font-bold">
+                      {Math.round(nutritionSummary.carbs)}g
+                    </div>
+                    <div>Carbs</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="font-bold">
+                      {Math.round(nutritionSummary.fat)}g
+                    </div>
+                    <div>Fat</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="font-bold">
+                      {Math.round(nutritionSummary.fiber)}g
+                    </div>
+                    <div>Fiber</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="font-bold">
+                      {Math.round(nutritionSummary.sodium)}mg
+                    </div>
+                    <div>Sodium</div>
+                  </div>
+                </div>
+              </div>
+            ) : null;
+          })()}
 
           {/* Order Calculation */}
           <div className="border-t border-gray-300 pt-3 mt-4">

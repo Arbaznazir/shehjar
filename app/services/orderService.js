@@ -1,45 +1,62 @@
-import { supabase } from "../../lib/supabaseClient";
 import { menuData } from "../data/menuData";
 
-// Create a new order in Supabase
+// Get orders from localStorage
+const getLocalOrders = () => {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const orders = localStorage.getItem("restaurantOrders");
+    return orders ? JSON.parse(orders) : [];
+  } catch (error) {
+    console.error("Error getting local orders:", error);
+    return [];
+  }
+};
+
+// Save orders to localStorage
+const saveLocalOrders = (orders) => {
+  if (typeof window === "undefined") return;
+
+  try {
+    localStorage.setItem("restaurantOrders", JSON.stringify(orders));
+  } catch (error) {
+    console.error("Error saving local orders:", error);
+  }
+};
+
+// Create a new order (localStorage only)
 export const createOrder = async (orderData) => {
   try {
-    const { data, error } = await supabase
-      .from('orders')
-      .insert([
-        {
-          customer_name: orderData.customerName,
-          customer_phone: orderData.customerPhone,
-          order_type: orderData.orderType,
-          table_number: orderData.tableNumber,
-          delivery_address: orderData.deliveryAddress,
-          payment_method: orderData.paymentMethod,
-          status: 'pending',
-          items: orderData.items
-        }
-      ])
-      .select();
+    const orders = getLocalOrders();
+    const newOrder = {
+      order_id: Date.now().toString(), // Simple ID generation
+      customer_name: orderData.customerName,
+      customer_phone: orderData.customerPhone,
+      order_type: orderData.orderType,
+      table_number: orderData.tableNumber,
+      delivery_address: orderData.deliveryAddress,
+      payment_method: orderData.paymentMethod,
+      status: "pending",
+      items: orderData.items,
+      timestamp: new Date().toISOString(),
+      is_paid: false,
+    };
 
-    if (error) throw error;
-    return data[0];
+    orders.unshift(newOrder);
+    saveLocalOrders(orders);
+    return newOrder;
   } catch (error) {
-    console.error('Error creating order:', error);
+    console.error("Error creating order:", error);
     throw error;
   }
 };
 
-// Get all orders from Supabase
+// Get all orders (localStorage only)
 export const getOrders = async () => {
   try {
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .order('timestamp', { ascending: false });
-
-    if (error) throw error;
-    return data;
+    return getLocalOrders();
   } catch (error) {
-    console.error('Error fetching orders:', error);
+    console.error("Error fetching orders:", error);
     return [];
   }
 };
@@ -47,59 +64,59 @@ export const getOrders = async () => {
 // Update order status
 export const updateOrderStatus = async (orderId, status) => {
   try {
-    const { data, error } = await supabase
-      .from('orders')
-      .update({ status })
-      .eq('order_id', orderId)
-      .select();
+    const orders = getLocalOrders();
+    const orderIndex = orders.findIndex((order) => order.order_id === orderId);
 
-    if (error) throw error;
-    return data[0];
+    if (orderIndex !== -1) {
+      orders[orderIndex].status = status;
+      saveLocalOrders(orders);
+      return orders[orderIndex];
+    }
+
+    throw new Error("Order not found");
   } catch (error) {
-    console.error('Error updating order status:', error);
+    console.error("Error updating order status:", error);
     throw error;
   }
 };
 
 // Get orders by date range
 export const getOrdersByDateRange = async (startDate, endDate) => {
-    try {
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .gte('timestamp', startDate)
-      .lte('timestamp', endDate)
-      .order('timestamp', { ascending: false });
-
-    if (error) throw error;
-    return data;
+  try {
+    const orders = getLocalOrders();
+    return orders.filter((order) => {
+      const orderDate = new Date(order.timestamp);
+      return orderDate >= new Date(startDate) && orderDate <= new Date(endDate);
+    });
   } catch (error) {
-    console.error('Error fetching orders by date range:', error);
+    console.error("Error fetching orders by date range:", error);
     return [];
   }
 };
 
 // Get order by ID
 export const getOrderById = async (orderId) => {
-      try {
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .eq('order_id', orderId)
-      .single();
+  try {
+    const orders = getLocalOrders();
+    const order = orders.find((order) => order.order_id === orderId);
 
-    if (error) throw error;
-    return data;
+    if (!order) {
+      throw new Error("Order not found");
+    }
+
+    return order;
   } catch (error) {
-    console.error('Error fetching order:', error);
+    console.error("Error fetching order:", error);
     throw error;
   }
 };
 
 // Get orders for a specific month
-export const getOrdersByMonth = async (month, year = new Date().getFullYear()) => {
+export const getOrdersByMonth = async (
+  month,
+  year = new Date().getFullYear()
+) => {
   try {
-    // Convert month name to number (0-11)
     const months = [
       "january",
       "february",
@@ -114,25 +131,21 @@ export const getOrdersByMonth = async (month, year = new Date().getFullYear()) =
       "november",
       "december",
     ];
-    const monthIndex = months.findIndex((m) => m.toLowerCase() === month.toLowerCase());
-    
-    if (monthIndex === -1) throw new Error('Invalid month name');
+    const monthIndex = months.findIndex(
+      (m) => m.toLowerCase() === month.toLowerCase()
+    );
 
-    // Create date range for the specified month
-    const startDate = new Date(year, monthIndex, 1).toISOString();
-    const endDate = new Date(year, monthIndex + 1, 0).toISOString();
+    if (monthIndex === -1) throw new Error("Invalid month name");
 
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .gte('timestamp', startDate)
-      .lte('timestamp', endDate)
-      .order('timestamp', { ascending: false });
-
-    if (error) throw error;
-    return data;
+    const orders = getLocalOrders();
+    return orders.filter((order) => {
+      const orderDate = new Date(order.timestamp);
+      return (
+        orderDate.getMonth() === monthIndex && orderDate.getFullYear() === year
+      );
+    });
   } catch (error) {
-    console.error('Error fetching orders by month:', error);
+    console.error("Error fetching orders by month:", error);
     return [];
   }
 };
@@ -140,15 +153,12 @@ export const getOrdersByMonth = async (month, year = new Date().getFullYear()) =
 // Delete an order
 export const deleteOrder = async (orderId) => {
   try {
-    const { error } = await supabase
-      .from('orders')
-      .delete()
-      .eq('order_id', orderId);
-
-    if (error) throw error;
+    const orders = getLocalOrders();
+    const filteredOrders = orders.filter((order) => order.order_id !== orderId);
+    saveLocalOrders(filteredOrders);
     return true;
   } catch (error) {
-    console.error('Error deleting order:', error);
+    console.error("Error deleting order:", error);
     throw error;
   }
 };
@@ -156,9 +166,12 @@ export const deleteOrder = async (orderId) => {
 // Update order details
 export const updateOrder = async (orderId, orderData) => {
   try {
-    const { data, error } = await supabase
-      .from('orders')
-      .update({
+    const orders = getLocalOrders();
+    const orderIndex = orders.findIndex((order) => order.order_id === orderId);
+
+    if (orderIndex !== -1) {
+      orders[orderIndex] = {
+        ...orders[orderIndex],
         customer_name: orderData.customerName,
         customer_phone: orderData.customerPhone,
         order_type: orderData.orderType,
@@ -166,311 +179,189 @@ export const updateOrder = async (orderId, orderData) => {
         delivery_address: orderData.deliveryAddress,
         payment_method: orderData.paymentMethod,
         status: orderData.status,
-        items: orderData.items
-      })
-      .eq('order_id', orderId)
-      .select();
+        items: orderData.items,
+      };
+      saveLocalOrders(orders);
+      return orders[orderIndex];
+    }
 
-    if (error) throw error;
-    return data[0];
+    throw new Error("Order not found");
   } catch (error) {
-    console.error('Error updating order:', error);
+    console.error("Error updating order:", error);
     throw error;
   }
 };
 
-    (m) => m.toLowerCase() === month.toLowerCase()
-  );
-
-  if (monthIndex === -1) return [];
-
-  return allOrders.filter((order) => {
-    const orderDate = new Date(order.date);
-    return (
-      orderDate.getMonth() === monthIndex && orderDate.getFullYear() === year
-    );
-  });
-};
-
-// Add a new order
-export const addOrder = (order) => {
-  if (typeof window === "undefined") return null;
-
-  try {
-    const orders = getOrders();
-
-    // Generate ID if not provided
-    if (!order.id) {
-      const now = new Date();
-      const id = `ORD-${now.getFullYear()}${(now.getMonth() + 1)
-        .toString()
-        .padStart(2, "0")}${now.getDate().toString().padStart(2, "0")}-${
-        orders.length
-      }`;
-      order.id = id;
-    }
-
-    // Set date if not provided
-    if (!order.date) {
-      order.date = new Date().toISOString();
-    }
-
-    const updatedOrders = [order, ...orders];
-    localStorage.setItem("restaurantOrders", JSON.stringify(updatedOrders));
-    return order;
-  } catch (error) {
-    console.error("Error adding order:", error);
-    return null;
-  }
-};
-
-// Get aggregated statistics
+// Get order statistics
 export const getOrderStats = (
   month = null,
   year = new Date().getFullYear()
 ) => {
-  let orders;
+  const orders = getLocalOrders();
 
+  let filteredOrders = orders;
   if (month) {
-    orders = getOrdersByMonth(month, year);
-  } else {
-    orders = getOrders();
+    const months = [
+      "january",
+      "february",
+      "march",
+      "april",
+      "may",
+      "june",
+      "july",
+      "august",
+      "september",
+      "october",
+      "november",
+      "december",
+    ];
+    const monthIndex = months.findIndex(
+      (m) => m.toLowerCase() === month.toLowerCase()
+    );
+
+    if (monthIndex !== -1) {
+      filteredOrders = orders.filter((order) => {
+        const orderDate = new Date(order.timestamp);
+        return (
+          orderDate.getMonth() === monthIndex &&
+          orderDate.getFullYear() === year
+        );
+      });
+    }
   }
 
-  const completedOrders = orders.filter(
-    (order) => order.status === "completed"
-  );
+  const totalOrders = filteredOrders.length;
+  const totalRevenue = filteredOrders.reduce((sum, order) => {
+    const orderTotal = order.items.reduce((itemSum, item) => {
+      return itemSum + item.price * item.quantity;
+    }, 0);
+    return sum + orderTotal;
+  }, 0);
 
-  // Calculate basic metrics
-  const totalOrders = completedOrders.length;
-  const totalRevenue = completedOrders.reduce(
-    (sum, order) => sum + order.total,
-    0
-  );
-  const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
-  const cancelRate =
-    orders.length > 0
-      ? ((orders.length - completedOrders.length) / orders.length) * 100
-      : 0;
+  const ordersByStatus = filteredOrders.reduce((acc, order) => {
+    acc[order.status] = (acc[order.status] || 0) + 1;
+    return acc;
+  }, {});
 
-  // Calculate item statistics
-  const itemStats = {};
-
-  completedOrders.forEach((order) => {
-    order.items.forEach((item) => {
-      if (!itemStats[item.id]) {
-        itemStats[item.id] = {
-          id: item.id,
-          name: item.name,
-          category: item.category,
-          quantity: 0,
-          revenue: 0,
-        };
-      }
-
-      itemStats[item.id].quantity += item.quantity;
-      itemStats[item.id].revenue += item.price * item.quantity;
-    });
-  });
-
-  const topSellingItems = Object.values(itemStats).sort(
-    (a, b) => b.revenue - a.revenue
+  const revenueByCategory = calculateRevenueByCategory(
+    filteredOrders.flatMap((order) => order.items)
   );
 
   return {
     totalOrders,
     totalRevenue,
-    averageOrderValue,
-    cancelRate,
-    topSellingItems: topSellingItems.slice(0, 10),
-    revenueByCategory: calculateRevenueByCategory(topSellingItems),
+    ordersByStatus,
+    revenueByCategory,
+    averageOrderValue: totalOrders > 0 ? totalRevenue / totalOrders : 0,
   };
 };
 
-// Helper to calculate revenue by category
 const calculateRevenueByCategory = (items) => {
   const categoryRevenue = {};
 
   items.forEach((item) => {
-    if (!categoryRevenue[item.category]) {
-      categoryRevenue[item.category] = 0;
-    }
-    categoryRevenue[item.category] += item.revenue;
+    const menuItem = menuData.sections
+      .flatMap((section) => section.items)
+      .find((menuItem) => menuItem.name === item.name);
+
+    const category = menuItem ? menuItem.category || "Other" : "Other";
+    categoryRevenue[category] =
+      (categoryRevenue[category] || 0) + item.price * item.quantity;
   });
 
-  // Convert to array and sort
-  return Object.entries(categoryRevenue)
-    .map(([category, revenue]) => ({ category, revenue }))
-    .sort((a, b) => b.revenue - a.revenue);
+  return categoryRevenue;
 };
 
-// Update order status and track revenue for completed orders
-export const updateOrderStatus = (orderId, newStatus) => {
-  if (typeof window === "undefined") return false;
+export const updateLocalOrderStatus = (orderId, newStatus) => {
+  const orders = getLocalOrders();
+  const orderIndex = orders.findIndex((order) => order.order_id === orderId);
 
-  try {
-    const allOrders = getOrders();
-    const orderIndex = allOrders.findIndex((order) => order.id === orderId);
-
-    if (orderIndex === -1) return false;
-
-    const order = allOrders[orderIndex];
-    const oldStatus = order.status;
-
-    // Update order status
-    allOrders[orderIndex] = { ...order, status: newStatus };
-
-    // If status changed to 'completed', update revenue metrics
-    if (newStatus === "completed" && oldStatus !== "completed") {
-      // Add order to recent orders and update revenue metrics
-      updateRevenueMetrics(order);
-    }
-
-    // Save updated orders
-    localStorage.setItem("restaurantOrders", JSON.stringify(allOrders));
-
-    return true;
-  } catch (error) {
-    console.error("Error updating order status:", error);
-    return false;
+  if (orderIndex !== -1) {
+    const updatedOrder = { ...orders[orderIndex], status: newStatus };
+    orders[orderIndex] = updatedOrder;
+    saveLocalOrders(orders);
+    return updatedOrder;
   }
+  return null;
 };
 
-// Helper function to update revenue metrics
-const updateRevenueMetrics = (order) => {
-  try {
-    // Get daily revenue data or initialize it
-    const revenueData = localStorage.getItem("revenueData")
-      ? JSON.parse(localStorage.getItem("revenueData"))
-      : { daily: {}, monthly: {}, items: {} };
-
-    const orderDate = new Date(order.date);
-    const dateString = orderDate.toISOString().split("T")[0]; // YYYY-MM-DD
-    const monthString = `${orderDate.getFullYear()}-${(orderDate.getMonth() + 1)
-      .toString()
-      .padStart(2, "0")}`;
-
-    // Update daily revenue
-    if (!revenueData.daily[dateString]) {
-      revenueData.daily[dateString] = {
-        totalRevenue: 0,
-        orderCount: 0,
-        items: [],
-      };
-    }
-
-    revenueData.daily[dateString].totalRevenue += order.total;
-    revenueData.daily[dateString].orderCount += 1;
-
-    // Update monthly revenue
-    if (!revenueData.monthly[monthString]) {
-      revenueData.monthly[monthString] = {
-        totalRevenue: 0,
-        orderCount: 0,
-      };
-    }
-
-    revenueData.monthly[monthString].totalRevenue += order.total;
-    revenueData.monthly[monthString].orderCount += 1;
-
-    // Update item sales data
-    order.items.forEach((item) => {
-      if (!revenueData.items[item.id]) {
-        revenueData.items[item.id] = {
-          id: item.id,
-          name: item.name,
-          category: item.category,
-          totalQuantity: 0,
-          totalRevenue: 0,
-        };
-      }
-
-      revenueData.items[item.id].totalQuantity += item.quantity;
-      revenueData.items[item.id].totalRevenue += item.price * item.quantity;
-    });
-
-    // Save updated revenue data
-    localStorage.setItem("revenueData", JSON.stringify(revenueData));
-
-    // Add to recent orders (keep top 100)
-    const recentOrders = localStorage.getItem("recentOrders")
-      ? JSON.parse(localStorage.getItem("recentOrders"))
-      : [];
-
-    // Add current order to the beginning
-    recentOrders.unshift(order);
-
-    // Keep only the most recent 100 orders
-    if (recentOrders.length > 100) {
-      recentOrders.length = 100;
-    }
-
-    localStorage.setItem("recentOrders", JSON.stringify(recentOrders));
-  } catch (error) {
-    console.error("Error updating revenue metrics:", error);
-  }
-};
-
-// Generate a CSV export of orders
 export const generateOrderCSV = (orders) => {
-  if (!orders || !orders.length) return "";
+  const headers = [
+    "Order ID",
+    "Customer Name",
+    "Phone",
+    "Order Type",
+    "Table Number",
+    "Status",
+    "Payment Method",
+    "Total Amount",
+    "Items",
+    "Timestamp",
+  ];
 
-  // Create CSV header
-  let csv = "Order ID,Date,Total,Items,Status,Payment Method\n";
+  const csvContent = [
+    headers.join(","),
+    ...orders.map((order) => {
+      const totalAmount = order.items.reduce(
+        (sum, item) => sum + item.price * item.quantity,
+        0
+      );
+      const itemsString = order.items
+        .map((item) => `${item.name} x${item.quantity}`)
+        .join("; ");
 
-  // Add data rows
+      return [
+        order.order_id,
+        `"${order.customer_name}"`,
+        order.customer_phone,
+        order.order_type,
+        order.table_number || "",
+        order.status,
+        order.payment_method,
+        totalAmount.toFixed(2),
+        `"${itemsString}"`,
+        new Date(order.timestamp).toLocaleString(),
+      ].join(",");
+    }),
+  ].join("\n");
+
+  return csvContent;
+};
+
+export const getRecentOrders = (limit = 10) => {
+  const orders = getLocalOrders();
+  return orders.slice(0, limit);
+};
+
+export const getRevenueData = (period = "monthly") => {
+  const orders = getLocalOrders();
+  const revenueData = {};
+
   orders.forEach((order) => {
-    const date = new Date(order.date).toLocaleDateString();
-    const items = order.items
-      .map((item) => `${item.quantity}x ${item.name}`)
-      .join("; ");
+    const date = new Date(order.timestamp);
+    let key;
 
-    csv += `"${order.id}","${date}","₹${order.total.toFixed(2)}","${items}","${
-      order.status
-    }","${order.paymentMethod}"\n`;
+    if (period === "daily") {
+      key = date.toISOString().split("T")[0];
+    } else if (period === "weekly") {
+      const weekStart = new Date(date.setDate(date.getDate() - date.getDay()));
+      key = weekStart.toISOString().split("T")[0];
+    } else {
+      key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+        2,
+        "0"
+      )}`;
+    }
+
+    const orderTotal = order.items.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    );
+
+    revenueData[key] = (revenueData[key] || 0) + orderTotal;
   });
 
-  return csv;
-};
-
-// Get recent orders for displaying in dashboard or reports
-export const getRecentOrders = (limit = 10) => {
-  if (typeof window === "undefined") return [];
-
-  try {
-    const recentOrders = localStorage.getItem("recentOrders")
-      ? JSON.parse(localStorage.getItem("recentOrders"))
-      : [];
-
-    return recentOrders.slice(0, limit);
-  } catch (error) {
-    console.error("Error retrieving recent orders:", error);
-    return [];
-  }
-};
-
-// Get revenue data for specified period
-export const getRevenueData = (period = "monthly") => {
-  if (typeof window === "undefined")
-    return { dailyData: {}, monthlyData: {}, topItems: [] };
-
-  try {
-    const revenueData = localStorage.getItem("revenueData")
-      ? JSON.parse(localStorage.getItem("revenueData"))
-      : { daily: {}, monthly: {}, items: {} };
-
-    // Sort items by revenue to get top selling
-    const topItems = Object.values(revenueData.items)
-      .sort((a, b) => b.totalRevenue - a.totalRevenue)
-      .slice(0, 10);
-
-    return {
-      dailyData: revenueData.daily,
-      monthlyData: revenueData.monthly,
-      topItems,
-    };
-  } catch (error) {
-    console.error("Error retrieving revenue data:", error);
-    return { dailyData: {}, monthlyData: {}, topItems: [] };
-  }
+  return Object.entries(revenueData)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, revenue]) => ({ date, revenue }));
 };

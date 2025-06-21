@@ -5,6 +5,7 @@ export const restaurantInfo = {
   tagline: "Traditional Restaurant & Bakery",
   address: "LEVEL-I & II BUS STAND TRAL-192123",
   phone: ["01933-250090", "7006588395", "9596023508"],
+  whatsappNumber: "7006588395", // Admin WhatsApp for orders
   social: {
     website: "www.shehjarfoods.com",
     instagram: "shehjar_restaurant",

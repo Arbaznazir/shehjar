@@ -4,10 +4,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import {
-  getGalleryImages,
-  imageCategories,
-} from "../admin/services/galleryService";
+import { getGalleryImages, imageCategories } from "../services/galleryService";
 
 export default function GalleryPage() {
   const [images, setImages] = useState([]);

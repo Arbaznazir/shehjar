@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation";
 import { useCart } from "../context/CartContext";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import { getFormattedPrice } from "../admin/services/menuService";
+import { getFormattedPrice } from "../services/menuService";
+import {
+  sendOrderToWhatsApp,
+  getAdminWhatsAppForDisplay,
+} from "../services/whatsappService";
+import { addToOrderHistory } from "../services/orderHistoryService";
 import Image from "next/image";
 
 const CheckoutPage = () => {
@@ -13,7 +18,7 @@ const CheckoutPage = () => {
   const { cartItems, getCartTotal, getFormattedCartTotal, clearCart } =
     useCart();
 
-  const [step, setStep] = useState(1); // 1: Customer Info, 2: Payment Option, 3: Order Confirmation
+  const [step, setStep] = useState(1); // 1: Customer Info, 2: Order Confirmation
   const [loading, setLoading] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [orderId, setOrderId] = useState(null);
@@ -27,9 +32,9 @@ const CheckoutPage = () => {
     specialInstructions: "",
   });
 
-  // Payment method state
-  const [paymentMethod, setPaymentMethod] = useState("payAfterDelivery");
-  const [isInRestaurant, setIsInRestaurant] = useState(false);
+  // Payment method is always Cash on Delivery
+  const paymentMethod = "payAfterDelivery";
+  const isInRestaurant = false;
 
   // Validate if cart is empty
   useEffect(() => {
@@ -44,15 +49,10 @@ const CheckoutPage = () => {
     setCustomerInfo((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Handle form submission
-  const handleSubmitCustomerInfo = (e) => {
+  // Handle form submission and place order directly
+  const handleSubmitCustomerInfo = async (e) => {
     e.preventDefault();
-    setStep(2);
-  };
-
-  // Handle payment method selection
-  const handlePaymentMethodChange = (method) => {
-    setPaymentMethod(method);
+    await handleSubmitOrder();
   };
 
   // Handle order submission
@@ -103,11 +103,31 @@ const CheckoutPage = () => {
         JSON.stringify([...existingNotifications, newNotification])
       );
 
-      // Order successful
+      // Send order to WhatsApp
+      const whatsappSent = sendOrderToWhatsApp(order);
+      if (whatsappSent) {
+        console.log("Order sent to WhatsApp successfully");
+      } else {
+        console.warn("Failed to send order to WhatsApp");
+      }
+
+      // Save to order history
+      const historySaved = addToOrderHistory(order);
+      if (historySaved) {
+        console.log("Order saved to history successfully");
+      } else {
+        console.warn("Failed to save order to history");
+      }
+
+      // Order successful - redirect to menu
       setOrderId(order.id);
       setOrderSuccess(true);
       clearCart();
-      setStep(3);
+
+      // Show success message briefly then redirect
+      setTimeout(() => {
+        router.push("/menu");
+      }, 2000);
     } catch (error) {
       console.error("Error submitting order:", error);
       alert("There was an error processing your order. Please try again.");
@@ -121,7 +141,7 @@ const CheckoutPage = () => {
     router.push("/menu");
   };
 
-  if (orderSuccess && step === 3) {
+  if (orderSuccess) {
     return (
       <div className="min-h-screen bg-black text-white">
         <Header />
@@ -153,6 +173,26 @@ const CheckoutPage = () => {
                   ? "is being processed."
                   : "is waiting for restaurant confirmation."}
               </p>
+
+              <div className="bg-green-900/30 border border-green-800 rounded-md p-4 mb-6">
+                <div className="flex items-center">
+                  <svg
+                    className="w-5 h-5 text-green-500 mr-2"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <p className="text-green-400 text-sm">
+                    Your order has been sent to our WhatsApp (
+                    {getAdminWhatsAppForDisplay()}) for immediate processing.
+                  </p>
+                </div>
+              </div>
 
               {paymentMethod !== "payFirst" && (
                 <div className="bg-yellow-900/30 border border-yellow-800 rounded-md p-4 mb-6">
@@ -192,61 +232,26 @@ const CheckoutPage = () => {
             <div className="w-24 h-1 bg-gradient-to-r from-[rgba(182,155,76,1)] to-[rgba(234,219,102,1)] mx-auto mb-6"></div>
           </div>
 
-          {/* Checkout Steps */}
+          {/* Info Message */}
           <div className="mb-8">
-            <div className="flex items-center justify-center mb-8">
-              <div
-                className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                  step >= 1
-                    ? "bg-gradient-to-r from-[rgba(182,155,76,1)] to-[rgba(234,219,102,1)] text-black"
-                    : "bg-gray-800 text-gray-400"
-                }`}
-              >
-                1
+            <div className="bg-blue-900/30 border border-blue-800 rounded-md p-4 text-center">
+              <div className="flex items-center justify-center">
+                <svg
+                  className="w-5 h-5 text-blue-500 mr-2"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <p className="text-blue-400 text-sm">
+                  Your order will be sent directly to our WhatsApp (
+                  {getAdminWhatsAppForDisplay()}) • Payment: Cash on Delivery
+                </p>
               </div>
-              <div
-                className={`h-1 w-16 md:w-32 ${
-                  step >= 2
-                    ? "bg-gradient-to-r from-[rgba(182,155,76,1)] to-[rgba(234,219,102,1)]"
-                    : "bg-gray-800"
-                }`}
-              ></div>
-              <div
-                className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                  step >= 2
-                    ? "bg-gradient-to-r from-[rgba(182,155,76,1)] to-[rgba(234,219,102,1)] text-black"
-                    : "bg-gray-800 text-gray-400"
-                }`}
-              >
-                2
-              </div>
-              <div
-                className={`h-1 w-16 md:w-32 ${
-                  step >= 3
-                    ? "bg-gradient-to-r from-[rgba(182,155,76,1)] to-[rgba(234,219,102,1)]"
-                    : "bg-gray-800"
-                }`}
-              ></div>
-              <div
-                className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                  step >= 3
-                    ? "bg-gradient-to-r from-[rgba(182,155,76,1)] to-[rgba(234,219,102,1)] text-black"
-                    : "bg-gray-800 text-gray-400"
-                }`}
-              >
-                3
-              </div>
-            </div>
-            <div className="flex justify-between text-sm text-gray-400 px-2">
-              <span className={step >= 1 ? "text-[rgba(234,219,102,1)]" : ""}>
-                Customer Info
-              </span>
-              <span className={step >= 2 ? "text-[rgba(234,219,102,1)]" : ""}>
-                Payment Method
-              </span>
-              <span className={step >= 3 ? "text-[rgba(234,219,102,1)]" : ""}>
-                Confirmation
-              </span>
             </div>
           </div>
 
@@ -254,233 +259,122 @@ const CheckoutPage = () => {
             {/* Checkout Form and Steps */}
             <div className="md:col-span-2">
               <div className="bg-gray-900 rounded-lg p-6 mb-6">
-                {step === 1 && (
-                  <form onSubmit={handleSubmitCustomerInfo}>
-                    <h2 className="text-xl font-bold mb-4">
-                      Customer Information
-                    </h2>
+                <form onSubmit={handleSubmitCustomerInfo}>
+                  <h2 className="text-xl font-bold mb-4">
+                    Customer Information
+                  </h2>
 
-                    <div className="mb-4">
-                      <label className="block text-gray-400 text-sm mb-2">
-                        Full Name *
-                      </label>
-                      <input
-                        type="text"
-                        name="name"
-                        value={customerInfo.name}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-[rgba(234,219,102,0.5)]"
-                      />
-                    </div>
-
-                    <div className="mb-4">
-                      <label className="block text-gray-400 text-sm mb-2">
-                        Phone Number *
-                      </label>
-                      <input
-                        type="tel"
-                        name="phone"
-                        value={customerInfo.phone}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-[rgba(234,219,102,0.5)]"
-                      />
-                    </div>
-
-                    <div className="mb-4">
-                      <label className="block text-gray-400 text-sm mb-2">
-                        Email (Optional)
-                      </label>
-                      <input
-                        type="email"
-                        name="email"
-                        value={customerInfo.email}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-[rgba(234,219,102,0.5)]"
-                      />
-                    </div>
-
-                    <div className="mb-4">
-                      <label className="block text-gray-400 text-sm mb-2">
-                        Delivery Address (Optional for in-restaurant orders)
-                      </label>
-                      <textarea
-                        name="address"
-                        value={customerInfo.address}
-                        onChange={handleInputChange}
-                        rows="2"
-                        className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-[rgba(234,219,102,0.5)]"
-                      ></textarea>
-                    </div>
-
-                    <div className="mb-6">
-                      <label className="block text-gray-400 text-sm mb-2">
-                        Special Instructions (Optional)
-                      </label>
-                      <textarea
-                        name="specialInstructions"
-                        value={customerInfo.specialInstructions}
-                        onChange={handleInputChange}
-                        rows="2"
-                        className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-[rgba(234,219,102,0.5)]"
-                        placeholder="Any allergies, special requests, etc."
-                      ></textarea>
-                    </div>
-
-                    <div className="flex justify-between">
-                      <button
-                        type="button"
-                        onClick={handleBackToMenu}
-                        className="px-4 py-2 rounded-md bg-gray-800 text-white hover:bg-gray-700"
-                      >
-                        Back to Menu
-                      </button>
-                      <button
-                        type="submit"
-                        className="px-6 py-2 bg-gradient-to-r from-[rgba(182,155,76,1)] to-[rgba(234,219,102,1)] text-black rounded-md font-medium"
-                      >
-                        Continue to Payment
-                      </button>
-                    </div>
-                  </form>
-                )}
-
-                {step === 2 && (
-                  <div>
-                    <h2 className="text-xl font-bold mb-4">Payment Method</h2>
-
-                    <div className="mb-6">
-                      <div className="mb-4">
-                        <label className="block text-gray-400 text-sm mb-2">
-                          Are you dining in the restaurant?
-                        </label>
-                        <div className="flex gap-4">
-                          <label className="flex items-center">
-                            <input
-                              type="radio"
-                              checked={isInRestaurant}
-                              onChange={() => setIsInRestaurant(true)}
-                              className="mr-2"
-                            />
-                            <span>Yes, I'm at the restaurant</span>
-                          </label>
-                          <label className="flex items-center">
-                            <input
-                              type="radio"
-                              checked={!isInRestaurant}
-                              onChange={() => setIsInRestaurant(false)}
-                              className="mr-2"
-                            />
-                            <span>No, it's a delivery order</span>
-                          </label>
-                        </div>
-                      </div>
-
-                      <div className="space-y-4">
-                        <div
-                          onClick={() =>
-                            handlePaymentMethodChange("payAfterDelivery")
-                          }
-                          className={`border ${
-                            paymentMethod === "payAfterDelivery"
-                              ? "border-[rgba(234,219,102,1)] bg-gray-800"
-                              : "border-gray-700 bg-gray-900"
-                          } rounded-lg p-4 cursor-pointer hover:bg-gray-800 transition-colors`}
-                        >
-                          <div className="flex items-center">
-                            <input
-                              type="radio"
-                              checked={paymentMethod === "payAfterDelivery"}
-                              onChange={() => {}}
-                              className="mr-3"
-                            />
-                            <div>
-                              <h3 className="font-medium">
-                                {isInRestaurant
-                                  ? "Pay After Feast"
-                                  : "Cash on Delivery"}
-                              </h3>
-                              <p className="text-sm text-gray-400">
-                                {isInRestaurant
-                                  ? "Enjoy your meal and pay when you're done"
-                                  : "Pay when your order arrives at your doorstep"}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div
-                          onClick={() => handlePaymentMethodChange("payFirst")}
-                          className={`border ${
-                            paymentMethod === "payFirst"
-                              ? "border-[rgba(234,219,102,1)] bg-gray-800"
-                              : "border-gray-700 bg-gray-900"
-                          } rounded-lg p-4 cursor-pointer hover:bg-gray-800 transition-colors`}
-                        >
-                          <div className="flex items-center">
-                            <input
-                              type="radio"
-                              checked={paymentMethod === "payFirst"}
-                              onChange={() => {}}
-                              className="mr-3"
-                            />
-                            <div>
-                              <h3 className="font-medium">Pay Now</h3>
-                              <p className="text-sm text-gray-400">
-                                Pay securely online via our payment gateway
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-between">
-                      <button
-                        type="button"
-                        onClick={() => setStep(1)}
-                        className="px-4 py-2 rounded-md bg-gray-800 text-white hover:bg-gray-700"
-                      >
-                        Back
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleSubmitOrder}
-                        disabled={loading}
-                        className="px-6 py-2 bg-gradient-to-r from-[rgba(182,155,76,1)] to-[rgba(234,219,102,1)] text-black rounded-md font-medium flex items-center"
-                      >
-                        {loading ? (
-                          <>
-                            <svg
-                              className="animate-spin -ml-1 mr-2 h-4 w-4 text-black"
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                            >
-                              <circle
-                                className="opacity-25"
-                                cx="12"
-                                cy="12"
-                                r="10"
-                                stroke="currentColor"
-                                strokeWidth="4"
-                              ></circle>
-                              <path
-                                className="opacity-75"
-                                fill="currentColor"
-                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                              ></path>
-                            </svg>
-                            Processing...
-                          </>
-                        ) : (
-                          "Place Order"
-                        )}
-                      </button>
-                    </div>
+                  <div className="mb-4">
+                    <label className="block text-gray-400 text-sm mb-2">
+                      Full Name *
+                    </label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={customerInfo.name}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-[rgba(234,219,102,0.5)]"
+                    />
                   </div>
-                )}
+
+                  <div className="mb-4">
+                    <label className="block text-gray-400 text-sm mb-2">
+                      Phone Number *
+                    </label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={customerInfo.phone}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-[rgba(234,219,102,0.5)]"
+                    />
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="block text-gray-400 text-sm mb-2">
+                      Email (Optional)
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={customerInfo.email}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-[rgba(234,219,102,0.5)]"
+                    />
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="block text-gray-400 text-sm mb-2">
+                      Delivery Address (Optional for in-restaurant orders)
+                    </label>
+                    <textarea
+                      name="address"
+                      value={customerInfo.address}
+                      onChange={handleInputChange}
+                      rows="2"
+                      className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-[rgba(234,219,102,0.5)]"
+                    ></textarea>
+                  </div>
+
+                  <div className="mb-6">
+                    <label className="block text-gray-400 text-sm mb-2">
+                      Special Instructions (Optional)
+                    </label>
+                    <textarea
+                      name="specialInstructions"
+                      value={customerInfo.specialInstructions}
+                      onChange={handleInputChange}
+                      rows="2"
+                      className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-[rgba(234,219,102,0.5)]"
+                      placeholder="Any allergies, special requests, etc."
+                    ></textarea>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <button
+                      type="button"
+                      onClick={handleBackToMenu}
+                      className="px-4 py-2 rounded-md bg-gray-800 text-white hover:bg-gray-700"
+                    >
+                      Back to Menu
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="px-6 py-2 bg-gradient-to-r from-[rgba(182,155,76,1)] to-[rgba(234,219,102,1)] text-black rounded-md font-medium flex items-center"
+                    >
+                      {loading ? (
+                        <>
+                          <svg
+                            className="animate-spin -ml-1 mr-2 h-4 w-4 text-black"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
+                          </svg>
+                          Processing...
+                        </>
+                      ) : (
+                        "Place Order"
+                      )}
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
 

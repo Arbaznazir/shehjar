@@ -1,25 +1,21 @@
-"use client";
-
 import "./globals.css";
-import { useState } from "react";
-import { createPagesBrowserClient } from "@supabase/auth-helpers-nextjs";
-import { SessionContextProvider } from "@supabase/auth-helpers-react";
 import { CartProvider } from "./context/CartContext";
+import Cart from "./components/Cart";
+
+export const metadata = {
+  title: "Shehjar - Authentic Kashmiri Cuisine",
+  description:
+    "Experience the authentic flavors of Kashmir at Shehjar restaurant. Traditional Kashmiri cuisine and international dishes.",
+};
 
 export default function RootLayout({ children }) {
-  const [supabaseClient] = useState(() =>
-    createPagesBrowserClient({
-      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
-      supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    })
-  );
-
   return (
     <html lang="en">
       <body>
-        <SessionContextProvider supabaseClient={supabaseClient}>
-          <CartProvider>{children}</CartProvider>
-        </SessionContextProvider>
+        <CartProvider>
+          {children}
+          <Cart />
+        </CartProvider>
       </body>
     </html>
   );
